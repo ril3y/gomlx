@@ -65,6 +65,16 @@ int mlx_model_get_vision_token_count(MLXModel* m);
 // Returns the number of stop tokens written.
 int mlx_model_get_stop_tokens(MLXModel* m, int* out_tokens, int max_tokens);
 
+// --- Region Detection (Point/Detect) ---
+
+// Point detection: fills out_coords with [x0,y0, x1,y1, ...], returns num points.
+// Returns -1 on error.
+int mlx_model_detect_points(MLXModel* m, const int* tokens, int n_tokens, float* out_coords, int max_objects);
+
+// Object detection: fills out_boxes with [x_min,y_min,x_max,y_max, ...], returns num objects.
+// Returns -1 on error.
+int mlx_model_detect_objects(MLXModel* m, const int* tokens, int n_tokens, float* out_boxes, int max_objects);
+
 // --- Memory & Error ---
 
 // Get current active memory usage in bytes.

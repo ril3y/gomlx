@@ -6,6 +6,7 @@ package bridge
 import "C"
 import (
 	"sync"
+	"sync/atomic"
 	"unsafe"
 )
 
@@ -13,9 +14,9 @@ import (
 type ProgressCallback func(progress float32, message string)
 
 var (
-	callbackMu    sync.Mutex
-	callbackMap   = make(map[uintptr]ProgressCallback)
-	nextCallbackID uintptr = 1
+	callbackMu     sync.Mutex
+	callbackMap    = make(map[uintptr]ProgressCallback)
+	nextCallbackID uint64 = 1
 )
 
 // RegisterCallback stores a Go callback and returns a handle that can be passed
@@ -23,10 +24,14 @@ var (
 func RegisterCallback(fn ProgressCallback) uintptr {
 	callbackMu.Lock()
 	defer callbackMu.Unlock()
-	id := nextCallbackID
-	nextCallbackID++
-	callbackMap[id] = fn
-	return id
+	id := atomic.AddUint64(&nextCallbackID, 1) - 1
+	// Skip ID 0 which means "no callback"
+	if id == 0 {
+		id = atomic.AddUint64(&nextCallbackID, 1) - 1
+	}
+	handle := uintptr(id)
+	callbackMap[handle] = fn
+	return handle
 }
 
 // UnregisterCallback removes a previously registered callback.

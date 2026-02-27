@@ -48,8 +48,8 @@ array MoondreamVisionEncoder::forward(const array& pixel_values) {
     x = add(matmul(x, transpose(*patch_embed_weight_)), *patch_embed_bias_);
 
     // --- 2. Add position embedding ---
-    // position_embedding_: [729, 1152] -> broadcast to [1, 729, 1152]
-    x = add(x, reshape(*position_embedding_, {1, num_patches, hidden}));
+    // position_embedding_: [1, 729, 1152] (already has batch dim)
+    x = add(x, *position_embedding_);
 
     // --- 3. Run 27 SigLIP blocks ---
     for (int i = 0; i < config_.vis_num_layers; i++) {
@@ -113,29 +113,28 @@ void MoondreamVisionEncoder::load_weights(
     };
 
     // --- Patch embedding (linear) ---
-    patch_embed_weight_ = find_weight(
-        "vision_encoder.encoder.model.visual.patch_embedding.linear.weight");
-    patch_embed_bias_ = find_weight(
-        "vision_encoder.encoder.model.visual.patch_embedding.linear.bias");
+    // Actual key: model.vision.patch_emb.weight [1152, 588]
+    patch_embed_weight_ = find_weight("model.vision.patch_emb.weight");
+    patch_embed_bias_ = find_weight("model.vision.patch_emb.bias");
 
     // --- Position embedding ---
-    position_embedding_ = find_weight(
-        "vision_encoder.encoder.model.visual.patch_embedding.position_embedding.weight");
+    // Actual key: model.vision.pos_emb [1, 729, 1152]
+    position_embedding_ = find_weight("model.vision.pos_emb");
 
     // --- Transformer blocks ---
     for (int i = 0; i < config_.vis_num_layers; i++) {
-        std::string prefix = "vision_encoder.encoder.model.visual.encoder.layers." + std::to_string(i);
+        std::string prefix = "model.vision.blocks." + std::to_string(i);
         auto& block = blocks_[i];
 
         // LayerNorm weights (with bias)
-        block.norm1_weight = find_weight(prefix + ".layer_norm1.weight");
-        block.norm1_bias = find_weight(prefix + ".layer_norm1.bias");
-        block.norm2_weight = find_weight(prefix + ".layer_norm2.weight");
-        block.norm2_bias = find_weight(prefix + ".layer_norm2.bias");
+        block.norm1_weight = find_weight(prefix + ".ln1.weight");
+        block.norm1_bias = find_weight(prefix + ".ln1.bias");
+        block.norm2_weight = find_weight(prefix + ".ln2.weight");
+        block.norm2_bias = find_weight(prefix + ".ln2.bias");
 
         // Fused QKV: [3*1152, 1152] = [3456, 1152] -> split into Q/K/V
-        auto qkv_weight = find_weight(prefix + ".self_attn.qkv_proj.weight");
-        auto qkv_bias = find_weight(prefix + ".self_attn.qkv_proj.bias");
+        auto qkv_weight = find_weight(prefix + ".attn.qkv.weight");
+        auto qkv_bias = find_weight(prefix + ".attn.qkv.bias");
 
         int h = config_.vis_hidden_size;  // 1152
         block.q_proj_weight = slice(qkv_weight, {0, 0}, {h, h});
@@ -147,8 +146,8 @@ void MoondreamVisionEncoder::load_weights(
         block.v_proj_bias = slice(qkv_bias, {2 * h}, {3 * h});
 
         // Output projection
-        block.out_proj_weight = find_weight(prefix + ".self_attn.out_proj.weight");
-        block.out_proj_bias = find_weight(prefix + ".self_attn.out_proj.bias");
+        block.out_proj_weight = find_weight(prefix + ".attn.proj.weight");
+        block.out_proj_bias = find_weight(prefix + ".attn.proj.bias");
 
         // MLP
         block.fc1_weight = find_weight(prefix + ".mlp.fc1.weight");
@@ -158,8 +157,8 @@ void MoondreamVisionEncoder::load_weights(
     }
 
     // --- Post-LayerNorm ---
-    post_ln_weight_ = find_weight("vision_encoder.encoder.model.visual.post_layernorm.weight");
-    post_ln_bias_ = find_weight("vision_encoder.encoder.model.visual.post_layernorm.bias");
+    post_ln_weight_ = find_weight("model.vision.post_ln.weight");
+    post_ln_bias_ = find_weight("model.vision.post_ln.bias");
 }
 
 } // namespace gomlx

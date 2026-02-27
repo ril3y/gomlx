@@ -3,6 +3,7 @@
 #include "config.h"
 #include "model_registry.h"
 #include "sampling.h"
+#include "models/moondream/moondream.h"
 
 #include "mlx/mlx.h"
 
@@ -202,6 +203,72 @@ int mlx_model_get_stop_tokens(MLXModel* m, int* out_tokens, int max_tokens) {
         out_tokens[i] = ids[i];
     }
     return count;
+}
+
+int mlx_model_detect_points(MLXModel* m, const int* tokens, int n_tokens, float* out_coords, int max_objects) {
+    clear_error();
+    if (!m || !m->model || !tokens || n_tokens <= 0 || !out_coords || max_objects <= 0) {
+        set_error("Invalid arguments to mlx_model_detect_points");
+        return -1;
+    }
+    try {
+        auto* moondream = dynamic_cast<gomlx::MoondreamModel*>(m->model.get());
+        if (!moondream) {
+            set_error("detect_points is only supported for Moondream models");
+            return -1;
+        }
+        // Reset state for fresh detection
+        m->model->reset_cache();
+        m->last_logits = std::nullopt;
+        m->last_token = -1;
+
+        std::vector<int> token_vec(tokens, tokens + n_tokens);
+        auto points = moondream->detect_points(token_vec, max_objects);
+
+        int count = static_cast<int>(points.size());
+        for (int i = 0; i < count; i++) {
+            out_coords[i * 2] = points[i].first;
+            out_coords[i * 2 + 1] = points[i].second;
+        }
+        return count;
+    } catch (const std::exception& e) {
+        set_error(e.what());
+        return -1;
+    }
+}
+
+int mlx_model_detect_objects(MLXModel* m, const int* tokens, int n_tokens, float* out_boxes, int max_objects) {
+    clear_error();
+    if (!m || !m->model || !tokens || n_tokens <= 0 || !out_boxes || max_objects <= 0) {
+        set_error("Invalid arguments to mlx_model_detect_objects");
+        return -1;
+    }
+    try {
+        auto* moondream = dynamic_cast<gomlx::MoondreamModel*>(m->model.get());
+        if (!moondream) {
+            set_error("detect_objects is only supported for Moondream models");
+            return -1;
+        }
+        // Reset state for fresh detection
+        m->model->reset_cache();
+        m->last_logits = std::nullopt;
+        m->last_token = -1;
+
+        std::vector<int> token_vec(tokens, tokens + n_tokens);
+        auto boxes = moondream->detect_objects(token_vec, max_objects);
+
+        int count = static_cast<int>(boxes.size());
+        for (int i = 0; i < count; i++) {
+            out_boxes[i * 4] = boxes[i][0];
+            out_boxes[i * 4 + 1] = boxes[i][1];
+            out_boxes[i * 4 + 2] = boxes[i][2];
+            out_boxes[i * 4 + 3] = boxes[i][3];
+        }
+        return count;
+    } catch (const std::exception& e) {
+        set_error(e.what());
+        return -1;
+    }
 }
 
 } // extern "C"

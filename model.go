@@ -84,7 +84,11 @@ func LoadModel(ctx context.Context, modelPath string, opts ...ModelOption) (*Mod
 }
 
 // Close releases all resources associated with the model.
+// It is safe to call Close concurrently with other Model methods.
 func (m *Model) Close() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	if m.tokenizer != nil {
 		m.tokenizer.Close()
 		m.tokenizer = nil

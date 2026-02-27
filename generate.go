@@ -32,7 +32,7 @@ func (m *Model) applyDefaults(input *GenerateInput) {
 			input.MaxTokens = defaultMaxTokens
 		}
 	}
-	if input.Temperature <= 0 {
+	if input.Temperature < 0 {
 		input.Temperature = defaultTemperature
 	}
 	if input.TopP <= 0 {
@@ -80,7 +80,10 @@ func (m *Model) Generate(ctx context.Context, input GenerateInput) (*GenerateOut
 	prompt := templateFn(input.Messages, TemplateContext{VisionTokenCount: visionTokenCount})
 
 	// Tokenize the prompt (don't add special tokens - template already has them)
-	tokens := m.tokenizer.Encode(prompt, false)
+	tokens, err := m.tokenizer.EncodeWithError(prompt, false)
+	if err != nil {
+		return nil, fmt.Errorf("%w: tokenization failed: %v", ErrInferenceFailed, err)
+	}
 	if len(tokens) == 0 {
 		return nil, fmt.Errorf("%w: empty prompt after tokenization", ErrInferenceFailed)
 	}
@@ -210,7 +213,10 @@ func (m *Model) GenerateStream(ctx context.Context, input GenerateInput, callbac
 	prompt := templateFn(input.Messages, TemplateContext{VisionTokenCount: visionTokenCount})
 
 	// Tokenize the prompt
-	tokens := m.tokenizer.Encode(prompt, false)
+	tokens, err := m.tokenizer.EncodeWithError(prompt, false)
+	if err != nil {
+		return fmt.Errorf("%w: tokenization failed: %v", ErrInferenceFailed, err)
+	}
 	if len(tokens) == 0 {
 		return fmt.Errorf("%w: empty prompt after tokenization", ErrInferenceFailed)
 	}

@@ -223,19 +223,57 @@ func FormatGemma2(messages []Message, ctx TemplateContext) string {
 	return b.String()
 }
 
+// MoondreamPointTokens builds token array for point detection.
+// Template: <|md_reserved_0|>point<|md_reserved_1|> {object}<|md_reserved_2|>
+// Token IDs: [1, 2581, 2] + tokenize(" " + object) + [3]
+func MoondreamPointTokens(object string, encode func(string, bool) []int32) []int32 {
+	tokens := []int32{1, 2581, 2} // <|md_reserved_0|>, "point", <|md_reserved_1|>
+	objTokens := encode(" "+object, false)
+	tokens = append(tokens, objTokens...)
+	tokens = append(tokens, 3) // <|md_reserved_2|>
+	return tokens
+}
+
+// MoondreamDetectTokens builds token array for object detection.
+// Template: <|md_reserved_0|>detect all<|md_reserved_1|> {object}<|md_reserved_2|>
+// Token IDs: [1, 7235, 476, 2] + tokenize(" " + object) + [3]
+func MoondreamDetectTokens(object string, encode func(string, bool) []int32) []int32 {
+	tokens := []int32{1, 7235, 476, 2} // <|md_reserved_0|>, "detect", "all", <|md_reserved_1|>
+	objTokens := encode(" "+object, false)
+	tokens = append(tokens, objTokens...)
+	tokens = append(tokens, 3) // <|md_reserved_2|>
+	return tokens
+}
+
 // FormatMoondream formats messages using the Moondream 2 chat template.
-// Moondream uses a simple Question/Answer format with no system message.
+// Moondream uses special template tokens from the starmie-v1 tokenizer:
+//   - <|endoftext|> (token 0) = BOS/EOS
+//   - <|md_reserved_0|> (token 1) = query start marker
+//   - "query" (token 15381) = query type indicator
+//   - <|md_reserved_1|> (token 2) = separator
+//   - <|md_reserved_2|> (token 3) = answer marker
 //
-// Format:
+// Text-only: <|endoftext|><|md_reserved_0|>query<|md_reserved_1|>{question}<|md_reserved_2|><|md_reserved_2|>
+// With image: <|md_reserved_0|>query<|md_reserved_1|>{question}<|md_reserved_2|><|md_reserved_2|>
 //
-//	<|endoftext|>
-//
-//	Question: {user_query}
-//
-//	Answer:
+// (BOS is prepended by the vision prefill for image queries)
 func FormatMoondream(messages []Message, ctx TemplateContext) string {
 	var b strings.Builder
-	b.WriteString("<|endoftext|>\n\nQuestion: ")
+
+	// For vision queries, BOS is added by the C++ vision prefill path
+	hasImage := false
+	for _, m := range messages {
+		if len(m.Images) > 0 {
+			hasImage = true
+			break
+		}
+	}
+
+	if !hasImage {
+		b.WriteString("<|endoftext|>")
+	}
+
+	b.WriteString("<|md_reserved_0|>query<|md_reserved_1|>")
 
 	// Use the last user message as the question
 	for i := len(messages) - 1; i >= 0; i-- {
@@ -245,6 +283,6 @@ func FormatMoondream(messages []Message, ctx TemplateContext) string {
 		}
 	}
 
-	b.WriteString("\n\nAnswer:")
+	b.WriteString("<|md_reserved_2|><|md_reserved_2|>")
 	return b.String()
 }

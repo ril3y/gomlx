@@ -174,9 +174,11 @@ func TestFormatMoondream(t *testing.T) {
 	}
 	result := FormatMoondream(msgs, TemplateContext{})
 
+	// Text-only: starts with BOS (<|endoftext|>), uses starmie-v1 template tokens
 	assert.Contains(t, result, "<|endoftext|>")
-	assert.Contains(t, result, "Question: Describe the image")
-	assert.True(t, strings.HasSuffix(result, "Answer:"))
+	assert.Contains(t, result, "<|md_reserved_0|>query<|md_reserved_1|>")
+	assert.Contains(t, result, "Describe the image")
+	assert.True(t, strings.HasSuffix(result, "<|md_reserved_2|><|md_reserved_2|>"))
 }
 
 func TestFormatMoondream_WithImage(t *testing.T) {
@@ -185,8 +187,9 @@ func TestFormatMoondream_WithImage(t *testing.T) {
 	}
 	result := FormatMoondream(msgs, TemplateContext{VisionTokenCount: 0})
 
-	// Moondream doesn't use vision placeholders in template
-	assert.Contains(t, result, "Question: What is this?")
+	// Vision: no BOS (added by C++ vision prefill), no vision placeholders
+	assert.NotContains(t, result, "<|endoftext|>")
+	assert.Contains(t, result, "<|md_reserved_0|>query<|md_reserved_1|>What is this?")
 	assert.NotContains(t, result, "<|image|>")
 	assert.NotContains(t, result, "<|vision_start|>")
 }
@@ -201,6 +204,6 @@ func TestFormatMoondream_MultiMessage(t *testing.T) {
 	result := FormatMoondream(msgs, TemplateContext{})
 
 	// Should use the last user message
-	assert.Contains(t, result, "Question: Second question")
+	assert.Contains(t, result, "Second question")
 	assert.NotContains(t, result, "First question")
 }

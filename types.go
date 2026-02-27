@@ -66,3 +66,27 @@ func WithMaxTokens(n int) ModelOption {
 		o.maxTokens = n
 	}
 }
+
+// Point represents a detected point with normalized [0,1] coordinates.
+type Point struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
+}
+
+// BoundingBox represents a detected object's bounding box with normalized [0,1] coordinates.
+type BoundingBox struct {
+	XMin float64 `json:"x_min"`
+	YMin float64 `json:"y_min"`
+	XMax float64 `json:"x_max"`
+	YMax float64 `json:"y_max"`
+}
+
+// PointResult contains the results of a point detection query.
+type PointResult struct {
+	Points []Point `json:"points"`
+}
+
+// DetectResult contains the results of an object detection query.
+type DetectResult struct {
+	Objects []BoundingBox `json:"objects"`
+}

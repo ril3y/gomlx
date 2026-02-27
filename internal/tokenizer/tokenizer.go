@@ -28,13 +28,26 @@ func New(modelPath string) (*Tokenizer, error) {
 	return &Tokenizer{tk: tk}, nil
 }
 
-// Encode tokenizes text into a slice of token IDs.
-func (t *Tokenizer) Encode(text string, addSpecialTokens bool) []int32 {
+// EncodeWithError tokenizes text into a slice of token IDs.
+// It returns an error if the underlying tokenizer produces no tokens for
+// non-empty input, which indicates a tokenization failure.
+func (t *Tokenizer) EncodeWithError(text string, addSpecialTokens bool) ([]int32, error) {
 	encoding, _ := t.tk.Encode(text, addSpecialTokens)
+	if len(encoding) == 0 && len(text) > 0 {
+		return nil, fmt.Errorf("tokenizer encode produced no tokens for non-empty input")
+	}
 	ids := make([]int32, len(encoding))
 	for i, id := range encoding {
 		ids[i] = int32(id)
 	}
+	return ids, nil
+}
+
+// Encode tokenizes text into a slice of token IDs.
+// It silently returns an empty/nil slice if encoding fails.
+// Prefer EncodeWithError when error handling is needed.
+func (t *Tokenizer) Encode(text string, addSpecialTokens bool) []int32 {
+	ids, _ := t.EncodeWithError(text, addSpecialTokens)
 	return ids
 }
 
