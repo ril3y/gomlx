@@ -18,6 +18,7 @@ gomlx gives you a clean Go API to load quantized models and run inference with f
 | Qwen 2 | Text | `mlx-community/Qwen2.5-3B-Instruct-4bit` |
 | Qwen 2.5-VL | Vision | `mlx-community/Qwen2.5-VL-7B-Instruct-4bit` |
 | Gemma 2 | Text | `mlx-community/gemma-2-2b-it-4bit` |
+| Moondream 2 | Vision | `vikhyatk/moondream2` |
 
 The architecture is model-agnostic — adding a new model only requires a C++ `BaseModel` subclass, a registry entry, and a chat template function. No changes to the bridge or generation layer.
 
@@ -152,6 +153,18 @@ go test -run "TestFormat|TestGetTemplate|TestTemplateContext" -v
 go test -bench=. -benchtime=1x -timeout=600s -run=^$
 ```
 
+### Test Coverage
+
+| Test Suite | What it covers |
+|-----------|---------------|
+| `TestFormat*` | Chat template formatting for all 7 architectures |
+| `TestGetTemplate*` | Template registry lookup and fallback behavior |
+| `TestLoadModel*` | Model loading for Llama, Mistral, Qwen2, Gemma2, LlamaVision, Qwen2.5-VL |
+| `TestGenerate*` | Text generation, streaming, cancellation, concurrency, latency |
+| `TestVision*` | Vision inference with LlamaVision and Qwen2.5-VL |
+| `TestStopTokens*` | Stop token detection for Llama, Mistral, Gemma2 |
+| `TestMemoryStats` | Metal memory reporting |
+
 ## API
 
 | Function | Description |
@@ -198,8 +211,9 @@ Go application
                           └── models/
                                 ├── llama/    — LlamaText, LlamaVision
                                 ├── mistral/  — MistralText
-                                ├── qwen/     — Qwen2Text, Qwen2.5-VL
-                                └── gemma/    — Gemma2Text
+                                ├── qwen/       — Qwen2Text, Qwen2.5-VL
+                                ├── gemma/      — Gemma2Text
+                                └── moondream/  — Moondream2 (SigLIP + Phi-1.5)
 ```
 
 All model-specific behavior lives behind `BaseModel` virtual methods. The bridge and generation layer have zero knowledge of concrete model types.
