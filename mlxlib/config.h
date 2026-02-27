@@ -46,6 +46,37 @@ struct Qwen2_5VisionConfig {
     std::vector<int> fullatt_block_indexes;  // {7,15,23,31}
 };
 
+struct MoondreamConfig {
+    // Text (Phi-1.5 style)
+    int text_hidden_size = 2048;
+    int text_num_layers = 24;
+    int text_intermediate_size = 8192;
+    int text_num_heads = 32;
+    int text_head_dim = 64;
+    int text_vocab_size = 51200;
+    float text_layer_norm_eps = 1e-5f;
+    float text_rope_theta = 10000.0f;
+    int text_rope_partial_dims = 32;
+    int prefix_attn = 730;
+    // Vision (SigLIP)
+    int vis_hidden_size = 1152;
+    int vis_num_layers = 27;
+    int vis_num_heads = 16;
+    int vis_head_dim = 72;
+    int vis_intermediate_size = 4304;
+    int vis_image_size = 378;
+    int vis_patch_size = 14;
+    float vis_layer_norm_eps = 1e-6f;
+    int vis_num_patches = 729;
+    // Projection
+    int proj_input_dim = 2304;
+    int proj_hidden_dim = 8192;
+    int proj_output_dim = 2048;
+    // Image normalization
+    float image_mean = 0.5f;
+    float image_std = 0.5f;
+};
+
 struct ModelConfig {
     std::string model_type;
     int hidden_size = 0;
@@ -65,6 +96,7 @@ struct ModelConfig {
     VisionModelConfig vision_config;
     TextModelConfig text_config;
     Qwen2_5VisionConfig qwen_vision_config;
+    MoondreamConfig moondream_config;
     std::vector<int> mrope_sections;
 
     // Compute head_dim if not explicitly set

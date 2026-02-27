@@ -5,6 +5,7 @@
 #include "models/qwen/qwen2_text.h"
 #include "models/qwen/qwen2_5_vl.h"
 #include "models/gemma/gemma2_text.h"
+#include "models/moondream/moondream.h"
 
 #include <stdexcept>
 
@@ -29,10 +30,13 @@ std::unique_ptr<BaseModel> create_model(const ModelConfig& config) {
     if (config.model_type == "gemma2") {
         return std::make_unique<Gemma2TextModel>(config);
     }
+    if (config.model_type == "moondream1") {
+        return std::make_unique<MoondreamModel>(config);
+    }
 
     throw std::runtime_error(
         "Unsupported model type: '" + config.model_type +
-        "'. Supported types: llama, mllama, mistral, qwen2, qwen2_5_vl, gemma2");
+        "'. Supported types: llama, mllama, mistral, qwen2, qwen2_5_vl, gemma2, moondream1");
 }
 
 std::unique_ptr<BaseModel> create_model_from_path(const std::string& model_path) {

@@ -19,6 +19,7 @@ var templateRegistry = map[string]ChatTemplateFunc{
 	"qwen2":      FormatQwen2,
 	"qwen2_5_vl": FormatQwen25VL,
 	"gemma2":     FormatGemma2,
+	"moondream1": FormatMoondream,
 }
 
 // GetTemplate returns the chat template function for the given architecture.
@@ -219,5 +220,31 @@ func FormatGemma2(messages []Message, ctx TemplateContext) string {
 	}
 
 	b.WriteString("<start_of_turn>model\n")
+	return b.String()
+}
+
+// FormatMoondream formats messages using the Moondream 2 chat template.
+// Moondream uses a simple Question/Answer format with no system message.
+//
+// Format:
+//
+//	<|endoftext|>
+//
+//	Question: {user_query}
+//
+//	Answer:
+func FormatMoondream(messages []Message, ctx TemplateContext) string {
+	var b strings.Builder
+	b.WriteString("<|endoftext|>\n\nQuestion: ")
+
+	// Use the last user message as the question
+	for i := len(messages) - 1; i >= 0; i-- {
+		if messages[i].Role == RoleUser {
+			b.WriteString(messages[i].Content)
+			break
+		}
+	}
+
+	b.WriteString("\n\nAnswer:")
 	return b.String()
 }

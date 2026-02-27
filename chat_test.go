@@ -8,7 +8,7 @@ import (
 )
 
 func TestGetTemplate_RegisteredArchitectures(t *testing.T) {
-	archs := []string{"llama", "llama3", "mllama", "mistral", "qwen2", "qwen2_5_vl", "gemma2"}
+	archs := []string{"llama", "llama3", "mllama", "mistral", "qwen2", "qwen2_5_vl", "gemma2", "moondream1"}
 	for _, arch := range archs {
 		fn := GetTemplate(arch)
 		assert.NotNil(t, fn, "template for %q should not be nil", arch)
@@ -165,4 +165,42 @@ func TestTemplateContext_ZeroValueSafe(t *testing.T) {
 	assert.NotPanics(t, func() { FormatQwen2(msgs, ctx) })
 	assert.NotPanics(t, func() { FormatQwen25VL(msgs, ctx) })
 	assert.NotPanics(t, func() { FormatGemma2(msgs, ctx) })
+	assert.NotPanics(t, func() { FormatMoondream(msgs, ctx) })
+}
+
+func TestFormatMoondream(t *testing.T) {
+	msgs := []Message{
+		{Role: RoleUser, Content: "Describe the image"},
+	}
+	result := FormatMoondream(msgs, TemplateContext{})
+
+	assert.Contains(t, result, "<|endoftext|>")
+	assert.Contains(t, result, "Question: Describe the image")
+	assert.True(t, strings.HasSuffix(result, "Answer:"))
+}
+
+func TestFormatMoondream_WithImage(t *testing.T) {
+	msgs := []Message{
+		{Role: RoleUser, Content: "What is this?", Images: []Image{{Path: "test.png"}}},
+	}
+	result := FormatMoondream(msgs, TemplateContext{VisionTokenCount: 0})
+
+	// Moondream doesn't use vision placeholders in template
+	assert.Contains(t, result, "Question: What is this?")
+	assert.NotContains(t, result, "<|image|>")
+	assert.NotContains(t, result, "<|vision_start|>")
+}
+
+func TestFormatMoondream_MultiMessage(t *testing.T) {
+	msgs := []Message{
+		{Role: RoleSystem, Content: "Be helpful"},
+		{Role: RoleUser, Content: "First question"},
+		{Role: RoleAssistant, Content: "First answer"},
+		{Role: RoleUser, Content: "Second question"},
+	}
+	result := FormatMoondream(msgs, TemplateContext{})
+
+	// Should use the last user message
+	assert.Contains(t, result, "Question: Second question")
+	assert.NotContains(t, result, "First question")
 }

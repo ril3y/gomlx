@@ -164,6 +164,24 @@ ModelConfig parse_config(const std::string& model_path) {
         }
     }
 
+    // Handle Moondream model type
+    if (config.model_type == "moondream1") {
+        config.is_vision_model = true;
+        config.tie_word_embeddings = false;
+
+        // Populate top-level ModelConfig from MoondreamConfig defaults
+        auto& md = config.moondream_config;
+        config.hidden_size = md.text_hidden_size;
+        config.num_hidden_layers = md.text_num_layers;
+        config.intermediate_size = md.text_intermediate_size;
+        config.num_attention_heads = md.text_num_heads;
+        config.num_key_value_heads = md.text_num_heads;  // MHA
+        config.vocab_size = md.text_vocab_size;
+        config.head_dim = md.text_head_dim;
+        config.rms_norm_eps = md.text_layer_norm_eps;
+        config.rope_theta = md.text_rope_theta;
+    }
+
     // Default num_key_value_heads to num_attention_heads if not specified (MHA)
     if (config.num_key_value_heads == 0 && config.num_attention_heads > 0) {
         config.num_key_value_heads = config.num_attention_heads;
