@@ -1,0 +1,28 @@
+# Build artifacts
+build/
+*.a
+*.o
+*.dylib
+
+# Compiled example binaries
+/text-test
+/vision-describe
+
+# Go
+go.sum
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+
+# Tokenizer lib (downloaded)
+lib/
+
+# Model files (large)
+/models/
+*.safetensors
+*.gguf
